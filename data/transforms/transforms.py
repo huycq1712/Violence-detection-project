@@ -1,55 +1,104 @@
-# encoding: utf-8
-"""
-@author:  sherlock
-@contact: sherlockliao01@gmail.com
-"""
-
-import math
+import torch
+import torchvision
 import random
+import math
+import numpy as np
+from PIL import Image
+import PIL, PIL.ImageOps, PIL.ImageEnhance, PIL.ImageDraw
+
+from torchvision.transforms import functional as F
+from torchvision.transforms import RandAugment
+from torch.nn.functional import interpolate
 
 
-class RandomErasing(object):
-    """ Randomly selects a rectangle region in an image and erases its pixels.
-        'Random Erasing Data Augmentation' by Zhong et al.
-        See https://arxiv.org/pdf/1708.04896.pdf
-    Args:
-         probability: The probability that the Random Erasing operation will be performed.
-         sl: Minimum proportion of erased area against input image.
-         sh: Maximum proportion of erased area against input image.
-         r1: Minimum aspect ratio of erased area.
-         mean: Erasing value.
-    """
+class Compose:
+    
+    def __init__(self, transforms) -> None:
+        self.transforms = transforms
+        
+    def __call__(self, image):
+        for t in self.transforms:
+            image = t(image)
+            
+        return image
+    
+    def __repr__(self) -> str:
+        format_string = self.__class__.__name__ + "("
+        for t in self.transforms:
+            format_string += "\n"
+            format_string += "    {0}".format(t)
+        format_string += "\n)"
+        return format_string
 
-    def __init__(self, probability=0.5, sl=0.02, sh=0.4, r1=0.3, mean=(0.4914, 0.4822, 0.4465)):
-        self.probability = probability
+
+class Resize:
+    
+    def __init__(self, size, interpolation=Image.BILINEAR) -> None:
+        self.img_size = size
+        self.interpolation = interpolation
+        
+    def __call__(self, image):
+        image = F.resize(image, self.img_size, self.interpolation)
+        return image
+    
+    
+class RandomHorizontalFlip:
+    
+    def __init__(self, prob=0.5):
+        self.prob = prob
+
+    def __call__(self, image):
+        if random.random() < self.prob:
+            image = F.hflip(image)
+            
+        return image
+
+
+class RandomHorizontalFlip:
+    
+    def __init__(self, prob=0.5):
+        self.prob = prob
+
+    def __call__(self, image):
+        if random.random() < self.prob:
+            image = F.vflip(image)
+            
+        return image
+
+
+class CenterCrop:
+    
+    def __init__(self, size):
+        self.size = size
+        
+    def __call__(self, image):
+        return F.center_crop(image, self.size)
+    
+    
+class ToTensor:
+    def __call__(self, image):
+        image = F.to_tensor(image)
+        return image
+
+
+class ToPILImage:
+    
+    def __init__(self, mode=None) -> None:
+        self.mode = mode
+    
+    def __call__(self, image):
+        
+        return F.to_pil_image(image, self.mode)
+    
+    
+class Normalize:
+    def __init__(self, mean, std, to_bgr255=False):
         self.mean = mean
-        self.sl = sl
-        self.sh = sh
-        self.r1 = r1
+        self.std = std
+        self.to_bgr255 = to_bgr255
 
-    def __call__(self, img):
-
-        if random.uniform(0, 1) > self.probability:
-            return img
-
-        for attempt in range(100):
-            area = img.size()[1] * img.size()[2]
-
-            target_area = random.uniform(self.sl, self.sh) * area
-            aspect_ratio = random.uniform(self.r1, 1 / self.r1)
-
-            h = int(round(math.sqrt(target_area * aspect_ratio)))
-            w = int(round(math.sqrt(target_area / aspect_ratio)))
-
-            if w < img.size()[2] and h < img.size()[1]:
-                x1 = random.randint(0, img.size()[1] - h)
-                y1 = random.randint(0, img.size()[2] - w)
-                if img.size()[0] == 3:
-                    img[0, x1:x1 + h, y1:y1 + w] = self.mean[0]
-                    img[1, x1:x1 + h, y1:y1 + w] = self.mean[1]
-                    img[2, x1:x1 + h, y1:y1 + w] = self.mean[2]
-                else:
-                    img[0, x1:x1 + h, y1:y1 + w] = self.mean[0]
-                return img
-
-        return img
+    def __call__(self, image):
+        if self.to_bgr255:
+            image = image[[2, 1, 0]] * 255
+        image = F.normalize(image, mean=self.mean, std=self.std)
+        return image

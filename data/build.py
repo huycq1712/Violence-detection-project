@@ -4,15 +4,26 @@
 @contact: sherlockliao01@gmail.com
 """
 
+from symbol import factor
 from torch.utils import data
 
-from .datasets.mnist import MNIST
+from . import datasets as D
+
+from .datasets.rwf2000 import RWF2000
+from .datasets.rlvs import RLVS
 from .transforms import build_transforms
+from .collate_batch import collate_fn
 
 
-def build_dataset(transforms, is_train=True):
-    datasets = MNIST(root='./', train=is_train, transform=transforms, download=True)
-    return datasets
+def build_dataset(dataset_name, transforms, is_train=True):
+    if dataset_name == 'rwf-2000':
+        dataset = RWF2000(transforms=transforms, is_train=is_train)
+    
+    if dataset_name == 'rlvs':
+        dataset = RLVS(transforms=transforms, is_train=is_train)
+
+    return dataset
+
 
 
 def make_data_loader(cfg, is_train=True):
