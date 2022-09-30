@@ -29,7 +29,7 @@ class RLVS(data.Dataset):
 
     def __getitem__(self, index):
         file_path = self.list_video[index].replace('.avi', '.npy')
-        label = [1] if file_path.split['/'][-2] is 'Fight' else [0]
+        label = [1] if file_path.split['/'][-2] == 'Fight' else [0]
         label = torch.tensor(label)
 
         data = np.load(file_path, mmap_mode='r')

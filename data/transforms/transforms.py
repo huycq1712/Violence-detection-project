@@ -16,11 +16,11 @@ class Compose:
     def __init__(self, transforms) -> None:
         self.transforms = transforms
         
-    def __call__(self, image):
+    def __call__(self, image, mask=None):
         for t in self.transforms:
-            image = t(image)
+            image, mask = t(image, mask)
             
-        return image
+        return image, mask
     
     def __repr__(self) -> str:
         format_string = self.__class__.__name__ + "("
@@ -34,36 +34,74 @@ class Compose:
 class Resize:
     
     def __init__(self, size, interpolation=Image.BILINEAR) -> None:
-        self.img_size = size
+        self.img_size =  size
         self.interpolation = interpolation
         
-    def __call__(self, image):
+    def __call__(self, image, mask=None):
         image = F.resize(image, self.img_size, self.interpolation)
-        return image
+        if mask is not None:
+            mask = F.resize(mask, self.img_size, self.interpolation)
+        return image, mask
+
+
+class RandomBrightness:
     
+    def __init__(self, brightness_factor=0.3, prob=0.5) -> None:
+        self.brightness_factor = brightness_factor
+        self.prob = prob
+        
+    def __call__(self, image, mask=None):
+        if random.random() < self.prob:
+            image = F.adjust_brightness(image, self.brightness_factor)
+        return image, mask
+
+class RandomContrast:
     
+    def __init__(self, contrast_factor=0.3, prob=0.5) -> None:
+        self.contrast_factor = contrast_factor
+        self.prob = prob
+        
+    def __call__(self, image, mask=None):
+        if random.random() < self.prob:
+            image = F.adjust_contrast(image, self.contrast_factor)
+        return image, mask
+    
+
+class RandomSaturation:
+    
+    def __init__(self, saturation_factor=0.3, prob=0.5) -> None:
+        self.saturation_factor = saturation_factor
+        self.prob = prob
+        
+    def __call__(self, image, mask=None):
+        if random.random() < self.prob:
+            image = F.adjust_saturation(image, self.saturation_factor)
+        return image, mask
+
 class RandomHorizontalFlip:
     
     def __init__(self, prob=0.5):
         self.prob = prob
 
-    def __call__(self, image):
+    def __call__(self, image, mask=None):
         if random.random() < self.prob:
             image = F.hflip(image)
+            mask = F.hflip(mask) if mask is not None else None
             
-        return image
+        return image, mask
 
 
-class RandomHorizontalFlip:
+class RandomVerticalFlip:
     
     def __init__(self, prob=0.5):
         self.prob = prob
 
-    def __call__(self, image):
+    def __call__(self, image, mask=None):
         if random.random() < self.prob:
             image = F.vflip(image)
+            mask = F.vflip(mask) if mask is not None else None
             
-        return image
+        return image, mask
 
 
 class CenterCrop:
@@ -76,9 +114,10 @@ class CenterCrop:
     
     
 class ToTensor:
-    def __call__(self, image):
+    def __call__(self, image, mask=None):
         image = F.to_tensor(image)
-        return image
+        mask = F.to_tensor(mask) if mask is not None else None
+        return image, mask
 
 
 class ToPILImage:
@@ -97,8 +136,16 @@ class Normalize:
         self.std = std
         self.to_bgr255 = to_bgr255
 
-    def __call__(self, image):
+    def __call__(self, image, mask=None):
         if self.to_bgr255:
             image = image[[2, 1, 0]] * 255
+        
+        image = image.type(torch.float32)
         image = F.normalize(image, mean=self.mean, std=self.std)
-        return image
+        return image, mask
+
+
+if __name__ == "__main__":
+    m =  Resize(224)
+    image = torch.rand(4, 5, 3, 256, 256)
+    print(m(image).shape) 

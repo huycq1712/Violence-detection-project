@@ -1,0 +1,28 @@
+MODEL:
+  BACKBONE: "resnet34"
+  RESNET:
+    RES5_STRIDE: 2
+    RES5_DILATION: 1
+    PRETRAINED: True
+  
+  SEPCONVLSTM:
+    INPUT_DIM: 512
+    HIDDEN_DIM: 128
+
+  SEG_HEAD:
+    INPUT_CHANNELS: 256
+
+  FUSE:
+    INPUT_CHANNELS: 128
+    OUTPUT_CHANNELS: 32
+
+
+SOLVER:
+  BASE_LR: 0.0001
+  WEIGHT_DECAY: 0.00004
+  IMS_PER_BATCH: 1
+
+TEST:
+  IMS_PER_BATCH: 2
+
+OUTPUT_DIR: "/home/huycq/Violence/Violence-detection-project/output"
